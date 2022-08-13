@@ -1,5 +1,14 @@
 #include "MainWindow.hpp"
 
+void MainWindow::centerWindow()
+{
+	sf::VideoMode desktop = sf::VideoMode::getDesktopMode();
+	sf::Vector2i centerPos;
+	centerPos.x = desktop.width / 2 - m_window.getSize().x / 2;
+	centerPos.y = desktop.height / 2 - m_window.getSize().y / 2;
+	m_window.setPosition(centerPos);
+}
+
 void MainWindow::processEvents()
 {
 	sf::Event e;
@@ -38,17 +47,11 @@ void MainWindow::update(sf::Time deltaTime)
 		m_mouseShape.setSize(sf::Vector2f(1, 1));
 		m_mouseShape.setOrigin(.5f, .5f);
 		m_mouseShape.setPosition(mousePos.x, mousePos.y);
-		bool didHovered = false;
+		m_isHovering = false;
 		
-		handleMouseHovering(&m_easyShape, &m_easyText, &didHovered);
-		handleMouseHovering(&m_normalShape, &m_normalText, &didHovered);
-		handleMouseHovering(&m_hardShape, &m_hardText, &didHovered);
-	
-		if (!m_isHovering && didHovered)
-		{
-			m_hoverSound.play();
-		}
-		m_isHovering = didHovered;
+		handleMouseHovering(&m_easyShape, &m_easyText);
+		handleMouseHovering(&m_normalShape, &m_normalText);
+		handleMouseHovering(&m_hardShape, &m_hardText);
 	}
 }
 
@@ -68,6 +71,36 @@ void MainWindow::handleButtonPress(sf::Mouse::Button button, float x, float y)
 		{
 			m_clickSound.play();
 			m_isLeftClicking = true;
+			if (m_easyShape.getGlobalBounds().intersects(m_mouseShape.getGlobalBounds()))
+			{
+				mineCount = 10;
+				tableSize = sf::Vector2f(8, 8);
+				cellSize = sf::Vector2f(64, 64);
+				m_scene = Scene::IN_GAME;
+				m_window.setSize(sf::Vector2u(tableSize.x * cellSize.x, tableSize.y * cellSize.y));
+				centerWindow();
+				debugPrint("Easy button clicked!\n");
+			}
+			if (m_normalShape.getGlobalBounds().intersects(m_mouseShape.getGlobalBounds()))
+			{
+				mineCount = 60;
+				tableSize = sf::Vector2f(16, 16);
+				cellSize = sf::Vector2f(32, 32);
+				m_scene = Scene::IN_GAME;
+				m_window.setSize(sf::Vector2u(tableSize.x * cellSize.x, tableSize.y * cellSize.y));
+				centerWindow();
+				debugPrint("Normal button clicked!\n");
+			}
+			if (m_hardShape.getGlobalBounds().intersects(m_mouseShape.getGlobalBounds()))
+			{
+				mineCount = 125;
+				tableSize = sf::Vector2f(32, 16);
+				cellSize = sf::Vector2f(32, 32);
+				m_scene = Scene::IN_GAME;
+				m_window.setSize(sf::Vector2u(tableSize.x * cellSize.x, tableSize.y * cellSize.y));
+				centerWindow();
+				debugPrint("Hard button clicked!\n");
+			}
 		}
 	}
 }
@@ -78,15 +111,13 @@ void MainWindow::handleButtonRelease(sf::Mouse::Button button, float x, float y)
 		m_isLeftClicking = false;
 }
 
-void MainWindow::handleMouseHovering(sf::RectangleShape* buttonShape, sf::Text* buttonText, bool* didHovered)
+void MainWindow::handleMouseHovering(sf::RectangleShape* buttonShape, sf::Text* buttonText)
 {
 	if (buttonShape->getGlobalBounds().intersects(m_mouseShape.getGlobalBounds()))
 	{
 		buttonShape->setFillColor(sf::Color::Red);
 		buttonText->setFillColor(sf::Color::Black);
-		*didHovered = true;
-		m_hoveredText = buttonText->getString();
-		std::cout << m_hoveredText.toAnsiString() << std::endl;
+		m_isHovering = true;
 	}
 	else
 	{
@@ -125,8 +156,8 @@ MainWindow::MainWindow()
 	m_font.loadFromMemory(&fontData, sizeof(fontData));
 
 	makeMenuShape(m_easyShape, sf::Vector2f(256, 64 + MENUSHAPEH * (.5f)));
-	makeMenuShape(m_normalShape, sf::Vector2f(256, 64 + MENUSHAPEH * (1.5f)));
-	makeMenuShape(m_hardShape, sf::Vector2f(256, 64 + MENUSHAPEH * (2.5f)));
+	makeMenuShape(m_normalShape, sf::Vector2f(256, 64 + MENUSHAPEH * (1.5f) + 10));
+	makeMenuShape(m_hardShape, sf::Vector2f(256, 64 + MENUSHAPEH * (2.5f) + 20));
 
 	makeMenuText(m_easyText, "EASY", m_easyShape.getPosition());
 	makeMenuText(m_normalText, "NORMAL", m_normalShape.getPosition());

@@ -24,18 +24,24 @@ private:
 	bool m_isLeftClicking = false;
 	bool m_isHovering = false;
 	sf::RectangleShape m_mouseShape;
+
 	sf::Text m_easyText;
 	sf::Text m_normalText;
 	sf::Text m_hardText;
 	sf::RectangleShape m_easyShape;
 	sf::RectangleShape m_normalShape;
 	sf::RectangleShape m_hardShape;
-	sf::String m_hoveredText;
+
 	sf::SoundBuffer m_clickSoundBuffer;
 	sf::SoundBuffer m_hoverSoundBuffer;
 	sf::Sound m_clickSound;
 	sf::Sound m_hoverSound;
 
+	sf::Vector2f tableSize;
+	sf::Vector2f cellSize;
+	int mineCount;
+
+	void centerWindow();
 	void processEvents();
 	void update(sf::Time deltaTime);
 	void draw();
@@ -43,10 +49,13 @@ private:
 	void handleKeyRelease(sf::Keyboard::Key key);
 	void handleButtonPress(sf::Mouse::Button button, float x, float y);
 	void handleButtonRelease(sf::Mouse::Button button, float x, float y);
-	void handleMouseHovering(sf::RectangleShape* buttonShape, sf::Text* buttonText, bool *didHovered);
+	void handleMouseHovering(sf::RectangleShape* buttonShape, sf::Text* buttonText);
 
 	void makeMenuShape(sf::RectangleShape &shape, sf::Vector2f position);
 	void makeMenuText(sf::Text &text, sf::String str, sf::Vector2f position);
+
+	template<typename T>
+	void debugPrint(T var);
 
 public:
 	MainWindow();
@@ -54,3 +63,10 @@ public:
 
 };
 
+template<typename T>
+inline void MainWindow::debugPrint(T var)
+{
+#ifdef _DEBUG
+	std::cout << var;
+#endif
+}
