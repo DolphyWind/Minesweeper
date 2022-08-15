@@ -2,6 +2,7 @@
 #include <SFML/Graphics.hpp>
 #include <SFML/Audio.hpp>
 #include <iostream>
+#include "Cell.h"
 #include "constants.h"
 #include "Resources.h"
 
@@ -22,6 +23,8 @@ private:
 	//bool m_inMainMenu = true;
 	Scene m_scene = Scene::MAIN_MENU;
 	bool m_isLeftClicking = false;
+	bool m_isRightClicking = false;
+	bool m_isMiddleClicking = false;
 	bool m_isHovering = false;
 	sf::RectangleShape m_mouseShape;
 
@@ -37,9 +40,13 @@ private:
 	sf::Sound m_clickSound;
 	sf::Sound m_hoverSound;
 
-	sf::Vector2f tableSize;
-	sf::Vector2f cellSize;
-	int mineCount;
+	sf::Texture m_textures32;
+	sf::Texture m_textures64;
+	sf::Texture* m_texturePtr;
+	sf::Vector2f m_tableSize;
+	int m_cellSize;
+	int m_mineCount;
+	std::vector<std::vector<Cell>> m_table;
 
 	void centerWindow();
 	void processEvents();
@@ -47,15 +54,16 @@ private:
 	void draw();
 	void handleKeyPress(sf::Keyboard::Key key);
 	void handleKeyRelease(sf::Keyboard::Key key);
-	void handleButtonPress(sf::Mouse::Button button, float x, float y);
-	void handleButtonRelease(sf::Mouse::Button button, float x, float y);
+	void handleWheelScroll(int delta, sf::Mouse::Wheel wheel, int x, int y);
+	void handleButtonPress(sf::Mouse::Button button, int x, int y);
+	void handleButtonRelease(sf::Mouse::Button button, int x, int y);
 	void handleMouseHovering(sf::RectangleShape* buttonShape, sf::Text* buttonText);
 
 	void makeMenuShape(sf::RectangleShape &shape, sf::Vector2f position);
 	void makeMenuText(sf::Text &text, sf::String str, sf::Vector2f position);
 
 	template<typename T>
-	void debugPrint(T var);
+	void debugPrint(T var, bool nl = true);
 
 public:
 	MainWindow();
@@ -64,9 +72,10 @@ public:
 };
 
 template<typename T>
-inline void MainWindow::debugPrint(T var)
+inline void MainWindow::debugPrint(T var, bool nl)
 {
 #ifdef _DEBUG
 	std::cout << var;
+	if (nl) std::cout << std::endl;
 #endif
 }
