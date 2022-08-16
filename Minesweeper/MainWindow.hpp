@@ -1,7 +1,11 @@
 #pragma once
 #include <SFML/Graphics.hpp>
 #include <SFML/Audio.hpp>
+#include <TGUI/TGUI.hpp>
 #include <iostream>
+#include <cstdlib>
+#include <ctime>
+#include <format>
 #include "Cell.h"
 #include "constants.h"
 #include "Resources.h"
@@ -16,15 +20,19 @@ class MainWindow
 {
 private:
 	sf::RenderWindow m_window;
+	tgui::GuiSFML m_gui;
+	tgui::MessageBox::Ptr m_youLostMsgBox;
+	tgui::MessageBox::Ptr m_youWinMsgBox;
+
 	const float FPS = 60.f;
 	const sf::Time TimePerFrame = sf::seconds(1.f / FPS);
 
 	sf::Font m_font;
-	//bool m_inMainMenu = true;
 	Scene m_scene = Scene::MAIN_MENU;
 	bool m_isLeftClicking = false;
 	bool m_isRightClicking = false;
 	bool m_isMiddleClicking = false;
+	bool m_isFirstClick = true;
 	bool m_isHovering = false;
 	sf::RectangleShape m_mouseShape;
 
@@ -43,9 +51,12 @@ private:
 	sf::Texture m_textures32;
 	sf::Texture m_textures64;
 	sf::Texture* m_texturePtr;
-	sf::Vector2f m_tableSize;
+	sf::Vector2i m_tableSize;
 	int m_cellSize;
 	int m_mineCount;
+	int m_safeRange;
+	bool m_youLost = false;
+	bool m_youWin = false;
 	std::vector<std::vector<Cell>> m_table;
 
 	void centerWindow();
@@ -58,6 +69,8 @@ private:
 	void handleButtonPress(sf::Mouse::Button button, int x, int y);
 	void handleButtonRelease(sf::Mouse::Button button, int x, int y);
 	void handleMouseHovering(sf::RectangleShape* buttonShape, sf::Text* buttonText);
+	void switchToMainMenu();
+	void switchToInGame(int mineCount, sf::Vector2i tableSize, int cellSize, int safeRange, bool *didStartedGame);
 
 	void makeMenuShape(sf::RectangleShape &shape, sf::Vector2f position);
 	void makeMenuText(sf::Text &text, sf::String str, sf::Vector2f position);
@@ -67,6 +80,9 @@ private:
 
 public:
 	MainWindow();
+	~MainWindow();
+
+	void handleTguiButtonPress(tgui::String buttonText);
 	void mainLoop();
 
 };

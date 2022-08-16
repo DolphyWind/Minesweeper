@@ -14,6 +14,7 @@ void MainWindow::processEvents()
 	sf::Event e;
 	while (m_window.pollEvent(e))
 	{
+		m_gui.handleEvent(e);
 		switch (e.type)
 		{
 		case sf::Event::Closed:
@@ -96,37 +97,17 @@ void MainWindow::handleButtonPress(sf::Mouse::Button button, int x, int y)
 			m_clickSound.play();
 			bool didStartedGame = false;
 			if (m_easyShape.getGlobalBounds().intersects(m_mouseShape.getGlobalBounds()))
-			{
-				m_mineCount = 10;
-				m_tableSize = sf::Vector2f(8, 8);
-				m_cellSize = 64;
-				m_texturePtr = &m_textures64;
-				didStartedGame = true;
-				debugPrint("Difficulty: Easy\n");
-			}
+				switchToInGame(10, { 8, 8 }, 64, 1, &didStartedGame);
 			else if (m_normalShape.getGlobalBounds().intersects(m_mouseShape.getGlobalBounds()))
-			{
-				m_mineCount = 60;
-				m_tableSize = sf::Vector2f(16, 16);
-				m_cellSize = 32;
-				m_texturePtr = &m_textures32;
-				didStartedGame = true;
-				debugPrint("Difficulty: Normal\n");
-			}
+				switchToInGame(40, { 16, 16 }, 32, 2, &didStartedGame);
 			else if (m_hardShape.getGlobalBounds().intersects(m_mouseShape.getGlobalBounds()))
-			{
-				m_mineCount = 125;
-				m_tableSize = sf::Vector2f(32, 16);
-				m_cellSize = 32;
-				m_texturePtr = &m_textures32;
-				didStartedGame = true;
-				debugPrint("Difficulty: Hard\n");
-			}
+				switchToInGame(99, { 32, 16 }, 32, 3, &didStartedGame);
 
 			if (didStartedGame)
 			{
 				m_scene = Scene::IN_GAME;
 				m_isHovering = false;
+				m_table.clear();
 				m_window.setSize(sf::Vector2u(m_tableSize.x * m_cellSize, m_tableSize.y * m_cellSize));
 				centerWindow();
 				for (int y = 0; y < m_tableSize.y; y++)
@@ -144,11 +125,109 @@ void MainWindow::handleButtonPress(sf::Mouse::Button button, int x, int y)
 		}
 		else if (!m_isLeftClicking && m_scene == Scene::IN_GAME)
 		{
-#ifdef _DEBUG
 			int _x = x / m_cellSize;
 			int _y = y / m_cellSize;
-			m_table[_y][_x].setHidden(!m_table[_y][_x].getHidden());
-#endif // _DEBUG
+
+			if (m_isFirstClick)
+			{
+				m_isFirstClick = false;
+				std::set<std::pair<int, int>> mineCoords;
+				std::set<std::pair<int, int>> bannedCoords;
+
+				for (int j = -m_safeRange; j <= m_safeRange; j++)
+				{
+					for (int i = -m_safeRange; i <= m_safeRange; i++)
+					{
+						bannedCoords.insert({ _x + i, _y + j });
+					}
+				}
+
+				while (mineCoords.size() != m_mineCount)
+				{
+					std::pair<int, int> randCoord = {
+						std::rand() % m_tableSize.x,
+						std::rand() % m_tableSize.y
+					};
+						
+					if (bannedCoords.contains(randCoord)) continue;
+					mineCoords.insert(randCoord);
+				}
+
+				for (auto& p : mineCoords)
+				{
+					m_table[p.second][p.first].setState(CellState::MINE);
+				}
+
+				for (int j = 0; j < m_tableSize.y; j++)
+				{
+					for (int i = 0; i < m_tableSize.x; i++)
+					{
+						if (m_table[j][i].getState() == CellState::MINE) continue;
+						int mines = 0;
+						for (int l = -1; l <= 1; l++)
+						{
+							for (int k = -1; k <= 1; k++)
+							{
+								try
+								{
+									mines += m_table.at(j + l).at(i + k).getState() == CellState::MINE;
+								}
+								catch (const std::exception&) {}
+							}
+						}
+						m_table[j][i].setState((CellState)mines);
+					}
+				}
+			}
+
+			Cell* currentCell = &m_table[_y][_x];
+			if (currentCell->getState() == CellState::MINE && !m_youLost && !currentCell->getFlagged())
+			{
+				currentCell->setActivatedMine(true);
+				for (int j = 0; j < m_tableSize.y; j++)
+				{
+					for (int i = 0; i < m_tableSize.x; i++)
+					{
+						Cell* iteratedCell = &m_table[j][i];
+						if (iteratedCell->getState() == CellState::MINE)
+						{
+							iteratedCell->setFlagged(false);
+							iteratedCell->setHidden(false);
+							iteratedCell->updateCellSprite();
+						}
+					}
+				}
+				m_youLost = true;
+			}
+			if(!m_youLost) m_table[_y][_x].open(_y, _x, &m_table);
+
+			m_youWin = true;
+
+			for (int j = 0; j < m_table.size(); j++)
+			{
+				for (int i = 0; i < m_table.size(); i++)
+				{
+					if (m_table[j][i].getState() == CellState::MINE && !m_table[j][i].getHidden()) m_youWin = false;
+					if (m_table[j][i].getState() != CellState::MINE && m_table[j][i].getHidden()) m_youWin = false;
+				}
+			}
+
+			if (m_youWin)
+			{
+				m_youLostMsgBox->setEnabled(false);
+				m_youLostMsgBox->setVisible(false);
+				m_youWinMsgBox->setEnabled(true);
+				m_youWinMsgBox->setVisible(true);
+				return;
+			}
+			if (m_youLost)
+			{
+				m_youLostMsgBox->setEnabled(true);
+				m_youLostMsgBox->setVisible(true);
+				m_youWinMsgBox->setEnabled(false);
+				m_youWinMsgBox->setVisible(false);
+				return;
+			}
 		}
 		m_isLeftClicking = true;
 	}
@@ -164,14 +243,6 @@ void MainWindow::handleButtonPress(sf::Mouse::Button button, int x, int y)
 	}
 	else if (button == sf::Mouse::Middle)
 	{
-		if (!m_isMiddleClicking)
-		{
-#ifdef _DEBUG
-			int _x = x / m_cellSize;
-			int _y = y / m_cellSize;
-			m_table[_y][_x].setActivatedMine(!m_table[_y][_x].getActivatedMine());
-#endif // _DEBUG
-		}
 		m_isMiddleClicking = true;
 	}
 }
@@ -201,6 +272,58 @@ void MainWindow::handleMouseHovering(sf::RectangleShape* buttonShape, sf::Text* 
 	}
 }
 
+void MainWindow::switchToMainMenu()
+{
+	m_scene = Scene::MAIN_MENU;
+	m_youLost = false;
+	m_table.clear();
+	m_isFirstClick = true;
+	m_window.setSize({ WINDOWSIZEX, WINDOWSIZEY });
+	m_youLostMsgBox->setVisible(false);
+	m_youLostMsgBox->setEnabled(false);
+	m_youLostMsgBox->setPosition(
+		(m_window.getSize().x - m_youLostMsgBox->getSize().x) / 2,
+		(m_window.getSize().y - m_youLostMsgBox->getSize().y) / 2
+	);
+
+	m_youWinMsgBox->setVisible(false);
+	m_youWinMsgBox->setEnabled(false);
+	m_youWinMsgBox->setPosition(
+		(m_window.getSize().x - m_youWinMsgBox->getSize().x) / 2,
+		(m_window.getSize().y - m_youWinMsgBox->getSize().y) / 2
+	);
+	centerWindow();
+}
+
+void MainWindow::switchToInGame(int mineCount, sf::Vector2i tableSize, int cellSize, int safeRange, bool* didStartedGame)
+{
+	m_mineCount = mineCount;
+	m_tableSize = tableSize;
+	m_cellSize = cellSize;
+	m_safeRange = safeRange;
+	*didStartedGame = true;
+	if (cellSize == 32) m_texturePtr = &m_textures32;
+	if (cellSize == 64) m_texturePtr = &m_textures64;
+	m_youLostMsgBox->setPosition(
+		(tableSize.x * cellSize - m_youLostMsgBox->getSize().x) / 2,
+		(tableSize.y * cellSize - m_youLostMsgBox->getSize().y) / 2
+	);
+	m_youWinMsgBox->setPosition(
+		(tableSize.x * cellSize - m_youWinMsgBox->getSize().x) / 2,
+		(tableSize.y * cellSize - m_youWinMsgBox->getSize().y) / 2
+	);
+}
+
+void MainWindow::handleTguiButtonPress(tgui::String buttonText)
+{
+	if (buttonText == "Menu")
+		switchToMainMenu();
+	else
+	{
+		debugPrint(buttonText.toStdString());
+	}
+}
+
 void MainWindow::makeMenuShape(sf::RectangleShape& shape, sf::Vector2f position)
 {
 	shape.setSize(sf::Vector2f(MENUSHAPEW, MENUSHAPEH));
@@ -227,6 +350,20 @@ MainWindow::MainWindow()
 {
 	m_window.create(sf::VideoMode(512, 512), "Minesweeper", sf::Style::Close);
 	m_window.setFramerateLimit(FPS);
+	m_gui.setTarget(m_window);
+
+	m_youLostMsgBox = tgui::MessageBox::create("Game Over", "You Lost", { "Menu" });
+	m_youLostMsgBox->onButtonPress(&MainWindow::handleTguiButtonPress, this);
+	m_youLostMsgBox->setVisible(false);
+	m_youLostMsgBox->setEnabled(false);
+
+	m_youWinMsgBox = tgui::MessageBox::create("Game Over", "You Win!", { "Menu" });
+	m_youWinMsgBox->onButtonPress(&MainWindow::handleTguiButtonPress, this);
+	m_youWinMsgBox->setVisible(false);
+	m_youWinMsgBox->setEnabled(false);
+
+	m_gui.add(m_youLostMsgBox, "YouLostMsgBox");
+	m_gui.add(m_youWinMsgBox, "YouWinMsgBox");
 
 	m_font.loadFromMemory(&fontData, sizeof(fontData));
 
@@ -246,8 +383,14 @@ MainWindow::MainWindow()
 	m_textures64.loadFromMemory(sprites64Data, sizeof(sprites64Data));
 }
 
+MainWindow::~MainWindow()
+{
+	
+}
+
 void MainWindow::mainLoop()
 {
+	std::srand(std::time(0));
 	sf::Clock clock;
 	sf::Time timeSinceLastUpdate = sf::Time::Zero;
 
@@ -289,6 +432,7 @@ void MainWindow::draw()
 			}
 		}
 	}
-	
+
+	m_gui.draw();
 	m_window.display();
 }

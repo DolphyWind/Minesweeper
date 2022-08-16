@@ -104,3 +104,18 @@ void Cell::updateCellSprite()
 	}
 	m_tileSprite.setTextureRect(mask);
 }
+
+void Cell::open(int _y, int _x, std::vector<std::vector<Cell>>* table)
+{
+	if (!m_isHidden) return;
+	setHidden(false);
+	if (this->getState() != CellState::EMPTY) return;
+	for (int y = -1; y <= 1; y++)
+	{
+		for (int x = -1; x <= 1; x++)
+		{
+			try { table->at(_y + y).at(_x + x).open(_y + y, _x + x, table); }
+			catch (std::exception&) {}
+		}
+	}
+}

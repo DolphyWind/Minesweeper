@@ -45,5 +45,6 @@ public:
 	sf::Vector2f getPosition();
 
 	void updateCellSprite();
+	void open(int _y, int _x, std::vector<std::vector<Cell>>* table);
 };
 
