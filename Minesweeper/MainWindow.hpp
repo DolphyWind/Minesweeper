@@ -21,6 +21,7 @@ class MainWindow
 private:
 	sf::RenderWindow m_window;
 	tgui::GuiSFML m_gui;
+	tgui::Group::Ptr m_mainMenuGroup;
 	tgui::MessageBox::Ptr m_youLostMsgBox;
 	tgui::MessageBox::Ptr m_youWinMsgBox;
 
@@ -45,8 +46,12 @@ private:
 
 	sf::SoundBuffer m_clickSoundBuffer;
 	sf::SoundBuffer m_hoverSoundBuffer;
+	sf::SoundBuffer m_winSoundBuffer;
+	sf::SoundBuffer m_loseSoundBuffer;
 	sf::Sound m_clickSound;
 	sf::Sound m_hoverSound;
+	sf::Sound m_winSound;
+	sf::Sound m_loseSound;
 
 	sf::Texture m_textures32;
 	sf::Texture m_textures64;
@@ -68,9 +73,10 @@ private:
 	void handleWheelScroll(int delta, sf::Mouse::Wheel wheel, int x, int y);
 	void handleButtonPress(sf::Mouse::Button button, int x, int y);
 	void handleButtonRelease(sf::Mouse::Button button, int x, int y);
-	void handleMouseHovering(sf::RectangleShape* buttonShape, sf::Text* buttonText);
+	bool handleMouseHovering(sf::RectangleShape* buttonShape, sf::Text* buttonText);
+	
 	void switchToMainMenu();
-	void switchToInGame(int mineCount, sf::Vector2i tableSize, int cellSize, int safeRange, bool *didStartedGame);
+	void switchToInGame(int mineCount, sf::Vector2i tableSize, int cellSize, int safeRange);
 
 	void makeMenuShape(sf::RectangleShape &shape, sf::Vector2f position);
 	void makeMenuText(sf::Text &text, sf::String str, sf::Vector2f position);

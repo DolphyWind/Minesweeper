@@ -57,11 +57,14 @@ void MainWindow::update(sf::Time deltaTime)
 		m_mouseShape.setSize(sf::Vector2f(1, 1));
 		m_mouseShape.setOrigin(.5f, .5f);
 		m_mouseShape.setPosition(mousePos.x, mousePos.y);
-		m_isHovering = false;
 		
-		handleMouseHovering(&m_easyShape, &m_easyText);
-		handleMouseHovering(&m_normalShape, &m_normalText);
-		handleMouseHovering(&m_hardShape, &m_hardText);
+		bool foo = false;
+		foo += handleMouseHovering(&m_easyShape, &m_easyText);
+		foo += handleMouseHovering(&m_normalShape, &m_normalText);
+		foo += handleMouseHovering(&m_hardShape, &m_hardText);
+		
+		if (!foo) m_isHovering = false;
+		else m_isHovering += foo;
 	}
 }
 
@@ -95,33 +98,12 @@ void MainWindow::handleButtonPress(sf::Mouse::Button button, int x, int y)
 		if (!m_isLeftClicking && m_isHovering && m_scene == Scene::MAIN_MENU)
 		{
 			m_clickSound.play();
-			bool didStartedGame = false;
 			if (m_easyShape.getGlobalBounds().intersects(m_mouseShape.getGlobalBounds()))
-				switchToInGame(10, { 8, 8 }, 64, 1, &didStartedGame);
+				switchToInGame(10, { 8, 8 }, 64, 1);
 			else if (m_normalShape.getGlobalBounds().intersects(m_mouseShape.getGlobalBounds()))
-				switchToInGame(40, { 16, 16 }, 32, 2, &didStartedGame);
+				switchToInGame(40, { 16, 16 }, 32, 2);
 			else if (m_hardShape.getGlobalBounds().intersects(m_mouseShape.getGlobalBounds()))
-				switchToInGame(99, { 32, 16 }, 32, 3, &didStartedGame);
-
-			if (didStartedGame)
-			{
-				m_scene = Scene::IN_GAME;
-				m_isHovering = false;
-				m_table.clear();
-				m_window.setSize(sf::Vector2u(m_tableSize.x * m_cellSize, m_tableSize.y * m_cellSize));
-				centerWindow();
-				for (int y = 0; y < m_tableSize.y; y++)
-				{
-					std::vector<Cell> newRow;
-					for (int x = 0; x < m_tableSize.x; x++)
-					{
-						Cell cell(m_texturePtr, m_cellSize, CellState::EMPTY);
-						cell.setPosition(x * m_cellSize, y * m_cellSize);
-						newRow.push_back(cell);
-					}
-					m_table.push_back(newRow);
-				}
-			}
+				switchToInGame(99, { 32, 16 }, 32, 3);
 		}
 		else if (!m_isLeftClicking && m_scene == Scene::IN_GAME)
 		{
@@ -214,6 +196,7 @@ void MainWindow::handleButtonPress(sf::Mouse::Button button, int x, int y)
 
 			if (m_youWin)
 			{
+				if (!m_youWinMsgBox->isEnabled()) m_winSound.play();
 				m_youLostMsgBox->setEnabled(false);
 				m_youLostMsgBox->setVisible(false);
 				m_youWinMsgBox->setEnabled(true);
@@ -222,6 +205,7 @@ void MainWindow::handleButtonPress(sf::Mouse::Button button, int x, int y)
 			}
 			if (m_youLost)
 			{
+				if(!m_youLostMsgBox->isEnabled()) m_loseSound.play();
 				m_youLostMsgBox->setEnabled(true);
 				m_youLostMsgBox->setVisible(true);
 				m_youWinMsgBox->setEnabled(false);
@@ -257,18 +241,20 @@ void MainWindow::handleButtonRelease(sf::Mouse::Button button, int x, int y)
 		m_isMiddleClicking = false;
 }
 
-void MainWindow::handleMouseHovering(sf::RectangleShape* buttonShape, sf::Text* buttonText)
+bool MainWindow::handleMouseHovering(sf::RectangleShape* buttonShape, sf::Text* buttonText)
 {
 	if (buttonShape->getGlobalBounds().intersects(m_mouseShape.getGlobalBounds()))
 	{
 		buttonShape->setFillColor(sf::Color::Red);
 		buttonText->setFillColor(sf::Color::Black);
-		m_isHovering = true;
+		if (!m_isHovering) m_hoverSound.play();
+		return true;
 	}
 	else
 	{
 		buttonShape->setFillColor(sf::Color::Black);
 		buttonText->setFillColor(sf::Color::Red);
+		return false;
 	}
 }
 
@@ -276,32 +262,26 @@ void MainWindow::switchToMainMenu()
 {
 	m_scene = Scene::MAIN_MENU;
 	m_youLost = false;
+	m_youWin = false;
 	m_table.clear();
 	m_isFirstClick = true;
 	m_window.setSize({ WINDOWSIZEX, WINDOWSIZEY });
 	m_youLostMsgBox->setVisible(false);
 	m_youLostMsgBox->setEnabled(false);
-	m_youLostMsgBox->setPosition(
-		(m_window.getSize().x - m_youLostMsgBox->getSize().x) / 2,
-		(m_window.getSize().y - m_youLostMsgBox->getSize().y) / 2
-	);
-
 	m_youWinMsgBox->setVisible(false);
 	m_youWinMsgBox->setEnabled(false);
-	m_youWinMsgBox->setPosition(
-		(m_window.getSize().x - m_youWinMsgBox->getSize().x) / 2,
-		(m_window.getSize().y - m_youWinMsgBox->getSize().y) / 2
-	);
+	m_mainMenuGroup->setVisible(true);
+	m_mainMenuGroup->setEnabled(true);
+
 	centerWindow();
 }
 
-void MainWindow::switchToInGame(int mineCount, sf::Vector2i tableSize, int cellSize, int safeRange, bool* didStartedGame)
+void MainWindow::switchToInGame(int mineCount, sf::Vector2i tableSize, int cellSize, int safeRange)
 {
 	m_mineCount = mineCount;
 	m_tableSize = tableSize;
 	m_cellSize = cellSize;
 	m_safeRange = safeRange;
-	*didStartedGame = true;
 	if (cellSize == 32) m_texturePtr = &m_textures32;
 	if (cellSize == 64) m_texturePtr = &m_textures64;
 	m_youLostMsgBox->setPosition(
@@ -312,6 +292,26 @@ void MainWindow::switchToInGame(int mineCount, sf::Vector2i tableSize, int cellS
 		(tableSize.x * cellSize - m_youWinMsgBox->getSize().x) / 2,
 		(tableSize.y * cellSize - m_youWinMsgBox->getSize().y) / 2
 	);
+
+	m_mainMenuGroup->setVisible(false);
+	m_mainMenuGroup->setEnabled(false);
+
+	m_scene = Scene::IN_GAME;
+	m_isHovering = false;
+	m_table.clear();
+	m_window.setSize(sf::Vector2u(m_tableSize.x * m_cellSize, m_tableSize.y * m_cellSize));
+	centerWindow();
+	for (int y = 0; y < m_tableSize.y; y++)
+	{
+		std::vector<Cell> newRow;
+		for (int x = 0; x < m_tableSize.x; x++)
+		{
+			Cell cell(m_texturePtr, m_cellSize, CellState::EMPTY);
+			cell.setPosition(x * m_cellSize, y * m_cellSize);
+			newRow.push_back(cell);
+		}
+		m_table.push_back(newRow);
+	}
 }
 
 void MainWindow::handleTguiButtonPress(tgui::String buttonText)
@@ -352,6 +352,9 @@ MainWindow::MainWindow()
 	m_window.setFramerateLimit(FPS);
 	m_gui.setTarget(m_window);
 
+	m_mainMenuGroup = tgui::Group::create();
+	m_gui.add(m_mainMenuGroup);
+
 	m_youLostMsgBox = tgui::MessageBox::create("Game Over", "You Lost", { "Menu" });
 	m_youLostMsgBox->onButtonPress(&MainWindow::handleTguiButtonPress, this);
 	m_youLostMsgBox->setVisible(false);
@@ -376,9 +379,13 @@ MainWindow::MainWindow()
 	makeMenuText(m_hardText, "HARD", m_hardShape.getPosition());
 
 	m_clickSoundBuffer.loadFromMemory(clickSoundData, sizeof(clickSoundData));
-	//m_hoverSoundBuffer.loadFromMemory(hoverSoundData, sizeof(hoverSoundData));
+	m_hoverSoundBuffer.loadFromMemory(hoverSoundData, sizeof(hoverSoundData));
+	m_winSoundBuffer.loadFromMemory(winSoundData, sizeof(winSoundData));
+	m_loseSoundBuffer.loadFromMemory(loseSoundData, sizeof(loseSoundData));
 	m_clickSound.setBuffer(m_clickSoundBuffer);
 	m_hoverSound.setBuffer(m_hoverSoundBuffer);
+	m_winSound.setBuffer(m_winSoundBuffer);
+	m_loseSound.setBuffer(m_loseSoundBuffer);
 	m_textures32.loadFromMemory(sprites32Data, sizeof(sprites32Data));
 	m_textures64.loadFromMemory(sprites64Data, sizeof(sprites64Data));
 }

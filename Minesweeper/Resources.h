@@ -5,3 +5,5 @@ extern unsigned char sprites64Data[3195];
 extern unsigned char fontData[75864];
 extern unsigned char hoverSoundData[6017];
 extern unsigned char clickSoundData[73514];
+extern unsigned char winSoundData[30825];
+extern unsigned char loseSoundData[26010];
