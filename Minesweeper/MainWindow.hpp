@@ -7,6 +7,7 @@
 #include <ctime>
 #include <format>
 #include <array>
+#include <list>
 #include "Cell.h"
 #include "constants.h"
 #include "Resources.h"
@@ -49,6 +50,11 @@ private:
 	tgui::MessageBox::Ptr m_youLostMsgBox;
 	tgui::MessageBox::Ptr m_youWinMsgBox;
 
+	sf::Font m_font;
+	sf::Text m_creditsTopText;
+	sf::Text m_creditsBottomText;
+	sf::Text m_howToPlayText;
+
 	const float FPS = 60.f;
 	const tgui::Layout m_menuButtonWidth = "27%";
 	const tgui::Layout m_menuButtonHeight = "10%";
@@ -59,16 +65,11 @@ private:
 	Scene m_scene = Scene::MAIN_MENU;
 	bool m_isLeftClicking = false;
 	bool m_isRightClicking = false;
-	bool m_isMiddleClicking = false;
 	bool m_isFirstClick = true;
 	sf::RectangleShape m_mouseShape;
 
-	sf::SoundBuffer m_clickSoundBuffer;
-	sf::SoundBuffer m_hoverSoundBuffer;
 	sf::SoundBuffer m_winSoundBuffer;
 	sf::SoundBuffer m_loseSoundBuffer;
-	sf::Sound m_clickSound;
-	sf::Sound m_hoverSound;
 	sf::Sound m_winSound;
 	sf::Sound m_loseSound;
 
@@ -76,6 +77,8 @@ private:
 	sf::Texture m_textures64;
 	sf::Texture m_backgroundTexture;
 	sf::Sprite m_backgroundSprite;
+	sf::Texture m_titleTexture;
+	sf::Sprite m_titleSprite;
 	sf::Texture* m_texturePtr;
 	sf::Vector2i m_tableSize;
 	int m_cellSize;
@@ -89,13 +92,11 @@ private:
 	void processEvents();
 	void update(sf::Time deltaTime);
 	void draw();
-	void handleKeyPress(sf::Keyboard::Key key);
-	void handleKeyRelease(sf::Keyboard::Key key);
-	void handleWheelScroll(int delta, sf::Mouse::Wheel wheel, int x, int y);
 	void handleButtonPress(sf::Mouse::Button button, int x, int y);
 	void handleButtonRelease(sf::Mouse::Button button, int x, int y);
 	
 	void switchToGroup(Group group);
+	Group getActivatedGroup();
 	void switchToMainMenu();
 	void switchToInGame(int mineCount, sf::Vector2i tableSize, int cellSize, int safeRange);
 
@@ -104,10 +105,8 @@ private:
 
 public:
 	MainWindow();
-	~MainWindow();
 
 	void handleTguiButtonPress(tgui::String buttonText);
-	void handleTguiHovering();
 	void createMainMenuButton(tgui::Button::Ptr* button, tgui::String buttonText, tgui::Layout y);
 
 	void mainLoop();

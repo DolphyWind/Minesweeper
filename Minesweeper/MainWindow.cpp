@@ -20,20 +20,11 @@ void MainWindow::processEvents()
 		case sf::Event::Closed:
 			m_window.close();
 			break;
-		case sf::Event::KeyPressed:
-			handleKeyPress(e.key.code);
-			break;
-		case sf::Event::KeyReleased:
-			handleKeyRelease(e.key.code);
-			break;
 		case sf::Event::MouseButtonPressed:
 			handleButtonPress(e.mouseButton.button, e.mouseButton.x, e.mouseButton.y);
 			break;
 		case sf::Event::MouseButtonReleased:
 			handleButtonRelease(e.mouseButton.button, e.mouseButton.x, e.mouseButton.y);
-			break;
-		case sf::Event::MouseWheelScrolled:
-			handleWheelScroll(e.mouseWheelScroll.delta, e.mouseWheelScroll.wheel, e.mouseWheelScroll.x, e.mouseWheelScroll.y);
 			break;
 		case sf::Event::Resized:
 		{
@@ -58,28 +49,6 @@ void MainWindow::update(sf::Time deltaTime)
 		m_mouseShape.setOrigin(.5f, .5f);
 		m_mouseShape.setPosition(mousePos.x, mousePos.y);
 	}
-}
-
-void MainWindow::handleKeyPress(sf::Keyboard::Key key)
-{
-}
-
-void MainWindow::handleKeyRelease(sf::Keyboard::Key key)
-{
-}
-
-void MainWindow::handleWheelScroll(int delta, sf::Mouse::Wheel wheel, int x, int y)
-{
-#ifdef _DEBUG
-	int _x = x / m_cellSize;
-	int _y = y / m_cellSize;
-	Cell* cellPtr = &m_table[_y][_x];
-	CellState state = cellPtr->getState();
-	state = (CellState)(state + delta);
-	if (state < 0) state = (CellState)(CellState::__SIZE - 1);
-	else if (state >= CellState::__SIZE) state = (CellState) 0;
-	cellPtr->setState(state);
-#endif // _DEBUG
 }
 
 void MainWindow::handleButtonPress(sf::Mouse::Button button, int x, int y)
@@ -204,10 +173,6 @@ void MainWindow::handleButtonPress(sf::Mouse::Button button, int x, int y)
 		}
 		m_isRightClicking = true;
 	}
-	else if (button == sf::Mouse::Middle)
-	{
-		m_isMiddleClicking = true;
-	}
 }
 
 void MainWindow::handleButtonRelease(sf::Mouse::Button button, int x, int y)
@@ -216,14 +181,18 @@ void MainWindow::handleButtonRelease(sf::Mouse::Button button, int x, int y)
 		m_isLeftClicking = false;
 	else if (button == sf::Mouse::Right)
 		m_isRightClicking = false;
-	else if (button == sf::Mouse::Middle)
-		m_isMiddleClicking = false;
 }
 
 void MainWindow::switchToGroup(Group group)
 {
 	for (int i = 0; i < Group::SIZE; i++)
 		m_groups[(Group)i]->setVisible(group == (Group)i);
+}
+
+Group MainWindow::getActivatedGroup()
+{
+	for (int i = 0; i < Group::SIZE; i++)
+		if (m_groups[(Group)i]->isVisible()) return (Group)i;
 }
 
 void MainWindow::switchToMainMenu()
@@ -307,11 +276,6 @@ void MainWindow::handleTguiButtonPress(tgui::String buttonText)
 		debugPrint(buttonText.toStdString());
 }
 
-void MainWindow::handleTguiHovering()
-{
-	//m_hoverSound.play();
-}
-
 void MainWindow::createMainMenuButton(tgui::Button::Ptr* button, tgui::String buttonText, tgui::Layout y)
 {
 	(*button) = tgui::Button::create(buttonText);
@@ -320,7 +284,6 @@ void MainWindow::createMainMenuButton(tgui::Button::Ptr* button, tgui::String bu
 	(*button)->setPosition(m_menuButtonX, y);
 	(*button)->setTextSize(m_menuButtonTextSize);
 	(*button)->onClick(&MainWindow::handleTguiButtonPress, this, (*button)->getText());
-	(*button)->onMouseEnter(&MainWindow::handleTguiHovering, this);
 }
 
 MainWindow::MainWindow()
@@ -377,23 +340,74 @@ MainWindow::MainWindow()
 	m_gui.add(m_youLostMsgBox, "YouLostMsgBox");
 	m_gui.add(m_youWinMsgBox, "YouWinMsgBox");
 
-	m_clickSoundBuffer.loadFromMemory(clickSoundData, sizeof(clickSoundData));
-	m_hoverSoundBuffer.loadFromMemory(hoverSoundData, sizeof(hoverSoundData));
+	m_titleTexture.loadFromMemory(titleTextData, sizeof(titleTextData));
+	m_titleSprite.setTexture(m_titleTexture);
+	m_titleSprite.setScale(0.5f, 0.5f);
+	m_titleSprite.setPosition((m_window.getSize().x - m_titleTexture.getSize().x * m_titleSprite.getScale().x) / 2,
+		35
+		);
+
 	m_winSoundBuffer.loadFromMemory(winSoundData, sizeof(winSoundData));
 	m_loseSoundBuffer.loadFromMemory(loseSoundData, sizeof(loseSoundData));
-	m_clickSound.setBuffer(m_clickSoundBuffer);
-	m_hoverSound.setBuffer(m_hoverSoundBuffer);
 	m_winSound.setBuffer(m_winSoundBuffer);
 	m_loseSound.setBuffer(m_loseSoundBuffer);
 	m_textures32.loadFromMemory(sprites32Data, sizeof(sprites32Data));
 	m_textures64.loadFromMemory(sprites64Data, sizeof(sprites64Data));
 	m_backgroundTexture.loadFromMemory(backgroundData, sizeof(backgroundData));
 	m_backgroundSprite.setTexture(m_backgroundTexture);
-}
 
-MainWindow::~MainWindow()
-{
-	
+	m_font.loadFromMemory(fontData, sizeof(fontData));
+	m_creditsTopText.setFont(m_font);
+	m_creditsTopText.setFillColor(sf::Color::White);
+	m_creditsTopText.setOutlineColor(sf::Color::Black);
+	m_creditsTopText.setOutlineThickness(1.5);
+	m_creditsTopText.setCharacterSize(20);
+	m_creditsTopText.setString(
+		"Programming: Yunus Emre Aydin\n"
+		"Artwork: Yunus Emre Aydin\n"
+		"Sounds: Yunus Emre Aydin"
+	);
+	m_creditsTopText.setPosition(
+		(m_window.getSize().x - m_creditsTopText.getGlobalBounds().width) / 4 + m_creditsTopText.getGlobalBounds().left,
+		(m_window.getSize().y - m_creditsTopText.getGlobalBounds().height) / 4 + m_creditsTopText.getGlobalBounds().top + 15
+	);
+
+	m_creditsBottomText.setFont(m_font);
+	m_creditsBottomText.setFillColor(sf::Color::Yellow);
+	m_creditsBottomText.setOutlineColor(sf::Color::Black);
+	m_creditsBottomText.setOutlineThickness(1.5);
+	m_creditsBottomText.setCharacterSize(20);
+	m_creditsBottomText.setString(
+		"Special thanks to SFML and TGUI teams!"
+	);
+	m_creditsBottomText.setPosition(
+		m_creditsTopText.getPosition().x,
+		3 * (m_window.getSize().y - m_creditsBottomText.getGlobalBounds().height) / 4 + m_creditsBottomText.getGlobalBounds().top + 20
+	);
+
+	m_howToPlayText.setFont(m_font);
+	m_howToPlayText.setFillColor(sf::Color::Green);
+	m_howToPlayText.setOutlineColor(sf::Color::Black);
+	m_howToPlayText.setOutlineThickness(1.5);
+	m_howToPlayText.setCharacterSize(19);
+	m_howToPlayText.setString(
+		"The board has divided into cells based\n"
+		"on difficulty. The mines are randomly\n"
+		"distrubuted after your first click.\n"
+		"The numbers show how many mines around\n"
+		"them. With that in mind, you can right\n"
+		"click and flag a cell if you thing that\n"
+		"cell contains a mine. To win you need\n"
+		"to open all cells that doesn't contain\n"
+		"a mine.\n\n\n\n"
+		"Easy: 8x8 board, contains 10 mines\n"
+		"Normal: 16x16 board, contains 40 mines\n"
+		"Hard: 32x16 board, contains 99 mines\n"
+	);
+	m_howToPlayText.setPosition(
+		m_creditsBottomText.getPosition().x,
+		(m_window.getSize().y - m_howToPlayText.getGlobalBounds().height) / 4 + m_howToPlayText.getGlobalBounds().top + 70
+	);
 }
 
 void MainWindow::mainLoop()
@@ -423,14 +437,14 @@ void MainWindow::draw()
 	if (m_scene == Scene::MAIN_MENU)
 	{
 		m_window.draw(m_backgroundSprite);
-
-		/*m_window.draw(m_easyShape);
-		m_window.draw(m_normalShape);
-		m_window.draw(m_hardShape);
-
-		m_window.draw(m_easyText);
-		m_window.draw(m_normalText);
-		m_window.draw(m_hardText);*/
+		m_window.draw(m_titleSprite);
+		if (getActivatedGroup() == Group::Credits)
+		{
+			m_window.draw(m_creditsTopText);
+			m_window.draw(m_creditsBottomText);
+		}
+		else if (getActivatedGroup() == Group::HowToPlay)
+			m_window.draw(m_howToPlayText);
 	}
 	else if (m_scene == Scene::IN_GAME)
 	{
