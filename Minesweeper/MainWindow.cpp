@@ -57,14 +57,6 @@ void MainWindow::update(sf::Time deltaTime)
 		m_mouseShape.setSize(sf::Vector2f(1, 1));
 		m_mouseShape.setOrigin(.5f, .5f);
 		m_mouseShape.setPosition(mousePos.x, mousePos.y);
-		
-		bool foo = false;
-		foo += handleMouseHovering(&m_easyShape, &m_easyText);
-		foo += handleMouseHovering(&m_normalShape, &m_normalText);
-		foo += handleMouseHovering(&m_hardShape, &m_hardText);
-		
-		if (!foo) m_isHovering = false;
-		else m_isHovering += foo;
 	}
 }
 
@@ -95,21 +87,12 @@ void MainWindow::handleButtonPress(sf::Mouse::Button button, int x, int y)
 	if (!m_window.hasFocus()) return;
 	if (button == sf::Mouse::Left)
 	{
-		if (!m_isLeftClicking && m_isHovering && m_scene == Scene::MAIN_MENU)
-		{
-			m_clickSound.play();
-			if (m_easyShape.getGlobalBounds().intersects(m_mouseShape.getGlobalBounds()))
-				switchToInGame(10, { 8, 8 }, 64, 1);
-			else if (m_normalShape.getGlobalBounds().intersects(m_mouseShape.getGlobalBounds()))
-				switchToInGame(40, { 16, 16 }, 32, 2);
-			else if (m_hardShape.getGlobalBounds().intersects(m_mouseShape.getGlobalBounds()))
-				switchToInGame(99, { 32, 16 }, 32, 3);
-		}
-		else if (!m_isLeftClicking && m_scene == Scene::IN_GAME)
+		if (!m_isLeftClicking && m_scene == Scene::IN_GAME && !m_youLost && !m_youWin)
 		{
 			int _x = x / m_cellSize;
 			int _y = y / m_cellSize;
 
+			// Create board
 			if (m_isFirstClick)
 			{
 				m_isFirstClick = false;
@@ -196,19 +179,15 @@ void MainWindow::handleButtonPress(sf::Mouse::Button button, int x, int y)
 
 			if (m_youWin)
 			{
-				if (!m_youWinMsgBox->isEnabled()) m_winSound.play();
-				m_youLostMsgBox->setEnabled(false);
+				if (!m_youWinMsgBox->isVisible()) m_winSound.play();
 				m_youLostMsgBox->setVisible(false);
-				m_youWinMsgBox->setEnabled(true);
 				m_youWinMsgBox->setVisible(true);
 				return;
 			}
 			if (m_youLost)
 			{
-				if(!m_youLostMsgBox->isEnabled()) m_loseSound.play();
-				m_youLostMsgBox->setEnabled(true);
+				if(!m_youLostMsgBox->isVisible()) m_loseSound.play();
 				m_youLostMsgBox->setVisible(true);
-				m_youWinMsgBox->setEnabled(false);
 				m_youWinMsgBox->setVisible(false);
 				return;
 			}
@@ -217,7 +196,7 @@ void MainWindow::handleButtonPress(sf::Mouse::Button button, int x, int y)
 	}
 	else if (button == sf::Mouse::Right)
 	{
-		if (!m_isRightClicking && m_scene == Scene::IN_GAME)
+		if (!m_isRightClicking && m_scene == Scene::IN_GAME && !m_youLost && !m_youWin)
 		{
 			int _x = x / m_cellSize;
 			int _y = y / m_cellSize;
@@ -241,37 +220,19 @@ void MainWindow::handleButtonRelease(sf::Mouse::Button button, int x, int y)
 		m_isMiddleClicking = false;
 }
 
-bool MainWindow::handleMouseHovering(sf::RectangleShape* buttonShape, sf::Text* buttonText)
+void MainWindow::switchToGroup(Group group)
 {
-	if (buttonShape->getGlobalBounds().intersects(m_mouseShape.getGlobalBounds()))
-	{
-		buttonShape->setFillColor(sf::Color::Red);
-		buttonText->setFillColor(sf::Color::Black);
-		if (!m_isHovering) m_hoverSound.play();
-		return true;
-	}
-	else
-	{
-		buttonShape->setFillColor(sf::Color::Black);
-		buttonText->setFillColor(sf::Color::Red);
-		return false;
-	}
+	for (int i = 0; i < Group::SIZE; i++)
+		m_groups[(Group)i]->setVisible(group == (Group)i);
 }
 
 void MainWindow::switchToMainMenu()
 {
 	m_scene = Scene::MAIN_MENU;
-	m_youLost = false;
-	m_youWin = false;
-	m_table.clear();
-	m_isFirstClick = true;
 	m_window.setSize({ WINDOWSIZEX, WINDOWSIZEY });
+	switchToGroup(Group::MainMenu);
 	m_youLostMsgBox->setVisible(false);
-	m_youLostMsgBox->setEnabled(false);
 	m_youWinMsgBox->setVisible(false);
-	m_youWinMsgBox->setEnabled(false);
-	m_mainMenuGroup->setVisible(true);
-	m_mainMenuGroup->setEnabled(true);
 
 	centerWindow();
 }
@@ -292,12 +253,15 @@ void MainWindow::switchToInGame(int mineCount, sf::Vector2i tableSize, int cellS
 		(tableSize.x * cellSize - m_youWinMsgBox->getSize().x) / 2,
 		(tableSize.y * cellSize - m_youWinMsgBox->getSize().y) / 2
 	);
-
-	m_mainMenuGroup->setVisible(false);
-	m_mainMenuGroup->setEnabled(false);
-
+	
+	switchToGroup(Group::SIZE); // Disables all groups
+	m_youLost = false;
+	m_youWin = false;
 	m_scene = Scene::IN_GAME;
-	m_isHovering = false;
+	m_isFirstClick = true;
+	m_youLostMsgBox->setVisible(false);
+	m_youWinMsgBox->setVisible(false);
+
 	m_table.clear();
 	m_window.setSize(sf::Vector2u(m_tableSize.x * m_cellSize, m_tableSize.y * m_cellSize));
 	centerWindow();
@@ -316,34 +280,47 @@ void MainWindow::switchToInGame(int mineCount, sf::Vector2i tableSize, int cellS
 
 void MainWindow::handleTguiButtonPress(tgui::String buttonText)
 {
-	if (buttonText == "Menu")
+	if (buttonText == MAINMENUTEXT)
 		switchToMainMenu();
+	else if (buttonText == PLAYAGAINTEXT)
+		switchToInGame(m_mineCount, m_tableSize, m_cellSize, m_safeRange);
+	
+	else if (buttonText == m_playButton->getText())
+		switchToGroup(Group::DifficultySelector);
+	else if (buttonText == m_creditsButton->getText())
+		switchToGroup(Group::Credits);
+	else if (buttonText == m_howToPlayButton->getText())
+		switchToGroup(Group::HowToPlay);
+	else if (buttonText == m_backButtonCredits->getText())
+		switchToGroup(Group::MainMenu);
+	else if (buttonText == m_quitButton->getText())
+		m_window.close();
+
+	else if (buttonText == m_easyButton->getText())
+		switchToInGame(10, { 8, 8 }, 64, 1);
+	else if (buttonText == m_normalButton->getText())
+		switchToInGame(40, { 16, 16 }, 32, 2);
+	else if (buttonText == m_hardButton->getText())
+		switchToInGame(99, { 32, 16 }, 32, 3);
+
 	else
-	{
 		debugPrint(buttonText.toStdString());
-	}
 }
 
-void MainWindow::makeMenuShape(sf::RectangleShape& shape, sf::Vector2f position)
+void MainWindow::handleTguiHovering()
 {
-	shape.setSize(sf::Vector2f(MENUSHAPEW, MENUSHAPEH));
-	shape.setFillColor(sf::Color::Black);
-	shape.setOrigin(shape.getSize().x / 2.f, shape.getSize().y / 2.f);
-	shape.setPosition(position);
+	//m_hoverSound.play();
 }
 
-void MainWindow::makeMenuText(sf::Text& text, sf::String str, sf::Vector2f position)
+void MainWindow::createMainMenuButton(tgui::Button::Ptr* button, tgui::String buttonText, tgui::Layout y)
 {
-	text.setFont(m_font);
-	text.setString(str);
-	text.setCharacterSize(45);
-	text.setFillColor(sf::Color::Red);
-	sf::FloatRect textRect = text.getLocalBounds();
-	text.setOrigin(
-		textRect.left + textRect.width / 2.0f, 
-		textRect.top + textRect.height / 2.0f
-	);
-	text.setPosition(position);
+	(*button) = tgui::Button::create(buttonText);
+	(*button)->setSize(m_menuButtonWidth, m_menuButtonHeight);
+	(*button)->setOrigin(.5f, .5f);
+	(*button)->setPosition(m_menuButtonX, y);
+	(*button)->setTextSize(m_menuButtonTextSize);
+	(*button)->onClick(&MainWindow::handleTguiButtonPress, this, (*button)->getText());
+	(*button)->onMouseEnter(&MainWindow::handleTguiHovering, this);
 }
 
 MainWindow::MainWindow()
@@ -352,31 +329,53 @@ MainWindow::MainWindow()
 	m_window.setFramerateLimit(FPS);
 	m_gui.setTarget(m_window);
 
-	m_mainMenuGroup = tgui::Group::create();
-	m_gui.add(m_mainMenuGroup);
+	createMainMenuButton(&m_playButton, "Play", "60%");
+	createMainMenuButton(&m_creditsButton, "Credits", "70.5%");
+	createMainMenuButton(&m_howToPlayButton, "How To Play", "81%");
+	createMainMenuButton(&m_quitButton, "Quit", "91.5%");
 
-	m_youLostMsgBox = tgui::MessageBox::create("Game Over", "You Lost", { "Menu" });
+	createMainMenuButton(&m_easyButton, "Easy", "60%");
+	createMainMenuButton(&m_normalButton, "Normal", "70.5%");
+	createMainMenuButton(&m_hardButton, "Hard", "81%");
+
+	createMainMenuButton(&m_backButtonDifficulty, "Back", "91.5%");
+	createMainMenuButton(&m_backButtonCredits, "Back", "91.5%");
+	createMainMenuButton(&m_backButtonHowToPlay, "Back", "91.5%");
+
+	m_groups[Group::MainMenu] = tgui::Group::create();
+	m_groups[Group::MainMenu]->add(m_playButton);
+	m_groups[Group::MainMenu]->add(m_creditsButton);
+	m_groups[Group::MainMenu]->add(m_howToPlayButton);
+	m_groups[Group::MainMenu]->add(m_quitButton);
+	m_gui.add(m_groups[Group::MainMenu]);
+
+	m_groups[Group::DifficultySelector] = tgui::Group::create();
+	m_groups[Group::DifficultySelector]->add(m_easyButton);
+	m_groups[Group::DifficultySelector]->add(m_normalButton);
+	m_groups[Group::DifficultySelector]->add(m_hardButton);
+	m_groups[Group::DifficultySelector]->add(m_backButtonDifficulty);
+	m_gui.add(m_groups[Group::DifficultySelector]);
+
+	m_groups[Group::Credits] = tgui::Group::create();
+	m_groups[Group::Credits]->add(m_backButtonCredits);
+	m_gui.add(m_groups[Group::Credits]);
+
+	m_groups[Group::HowToPlay] = tgui::Group::create();
+	m_groups[Group::HowToPlay]->add(m_backButtonHowToPlay);
+	m_gui.add(m_groups[Group::HowToPlay]);
+
+	switchToGroup(Group::MainMenu);
+
+	m_youLostMsgBox = tgui::MessageBox::create("Game Over", "You Lost", { PLAYAGAINTEXT, MAINMENUTEXT });
 	m_youLostMsgBox->onButtonPress(&MainWindow::handleTguiButtonPress, this);
 	m_youLostMsgBox->setVisible(false);
-	m_youLostMsgBox->setEnabled(false);
 
-	m_youWinMsgBox = tgui::MessageBox::create("Game Over", "You Win!", { "Menu" });
+	m_youWinMsgBox = tgui::MessageBox::create("Game Over", "You Win!", { PLAYAGAINTEXT, MAINMENUTEXT });
 	m_youWinMsgBox->onButtonPress(&MainWindow::handleTguiButtonPress, this);
 	m_youWinMsgBox->setVisible(false);
-	m_youWinMsgBox->setEnabled(false);
 
 	m_gui.add(m_youLostMsgBox, "YouLostMsgBox");
 	m_gui.add(m_youWinMsgBox, "YouWinMsgBox");
-
-	m_font.loadFromMemory(&fontData, sizeof(fontData));
-
-	makeMenuShape(m_easyShape, sf::Vector2f(256, 64 + MENUSHAPEH * (.5f)));
-	makeMenuShape(m_normalShape, sf::Vector2f(256, 64 + MENUSHAPEH * (1.5f) + 10));
-	makeMenuShape(m_hardShape, sf::Vector2f(256, 64 + MENUSHAPEH * (2.5f) + 20));
-
-	makeMenuText(m_easyText, "EASY", m_easyShape.getPosition());
-	makeMenuText(m_normalText, "NORMAL", m_normalShape.getPosition());
-	makeMenuText(m_hardText, "HARD", m_hardShape.getPosition());
 
 	m_clickSoundBuffer.loadFromMemory(clickSoundData, sizeof(clickSoundData));
 	m_hoverSoundBuffer.loadFromMemory(hoverSoundData, sizeof(hoverSoundData));
@@ -388,6 +387,8 @@ MainWindow::MainWindow()
 	m_loseSound.setBuffer(m_loseSoundBuffer);
 	m_textures32.loadFromMemory(sprites32Data, sizeof(sprites32Data));
 	m_textures64.loadFromMemory(sprites64Data, sizeof(sprites64Data));
+	m_backgroundTexture.loadFromMemory(backgroundData, sizeof(backgroundData));
+	m_backgroundSprite.setTexture(m_backgroundTexture);
 }
 
 MainWindow::~MainWindow()
@@ -421,13 +422,15 @@ void MainWindow::draw()
 
 	if (m_scene == Scene::MAIN_MENU)
 	{
-		m_window.draw(m_easyShape);
+		m_window.draw(m_backgroundSprite);
+
+		/*m_window.draw(m_easyShape);
 		m_window.draw(m_normalShape);
 		m_window.draw(m_hardShape);
 
 		m_window.draw(m_easyText);
 		m_window.draw(m_normalText);
-		m_window.draw(m_hardText);
+		m_window.draw(m_hardText);*/
 	}
 	else if (m_scene == Scene::IN_GAME)
 	{

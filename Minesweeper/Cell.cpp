@@ -107,7 +107,7 @@ void Cell::updateCellSprite()
 
 void Cell::open(int _y, int _x, std::vector<std::vector<Cell>>* table)
 {
-	if (!m_isHidden) return;
+	if (!m_isHidden || m_isFlagged) return;
 	setHidden(false);
 	if (this->getState() != CellState::EMPTY) return;
 	for (int y = -1; y <= 1; y++)

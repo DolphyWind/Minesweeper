@@ -1,6 +1,6 @@
 #pragma once
 
-#define MENUSHAPEW 384.f
-#define MENUSHAPEH 128.f
+#define MAINMENUTEXT "Main Menu"
+#define PLAYAGAINTEXT "Play Again"
 #define WINDOWSIZEX 512
 #define WINDOWSIZEY 512
