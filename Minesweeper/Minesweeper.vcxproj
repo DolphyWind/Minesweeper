@@ -164,7 +164,14 @@
     <ClInclude Include="Cell.h" />
     <ClInclude Include="constants.h" />
     <ClInclude Include="MainWindow.hpp" />
+    <ClInclude Include="resource.h" />
     <ClInclude Include="Resources.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Minesweeper.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\icon.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

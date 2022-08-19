@@ -408,6 +408,9 @@ MainWindow::MainWindow()
 		m_creditsBottomText.getPosition().x,
 		(m_window.getSize().y - m_howToPlayText.getGlobalBounds().height) / 4 + m_howToPlayText.getGlobalBounds().top + 70
 	);
+
+	m_iconImage.loadFromMemory(iconData, sizeof(iconData));
+	m_window.setIcon(m_iconImage.getSize().x, m_iconImage.getSize().y, m_iconImage.getPixelsPtr());
 }
 
 void MainWindow::mainLoop()

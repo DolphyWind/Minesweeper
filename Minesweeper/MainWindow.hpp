@@ -73,6 +73,7 @@ private:
 	sf::Sound m_winSound;
 	sf::Sound m_loseSound;
 
+	sf::Image m_iconImage;
 	sf::Texture m_textures32;
 	sf::Texture m_textures64;
 	sf::Texture m_backgroundTexture;

@@ -7,3 +7,4 @@ extern unsigned char loseSoundData[26010];
 extern unsigned char backgroundData[70375];
 extern unsigned char titleTextData[38073];
 extern unsigned char fontData[75864];
+extern unsigned char iconData[390];
